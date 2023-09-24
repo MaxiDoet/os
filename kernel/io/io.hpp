@@ -45,7 +45,7 @@ static inline uint32_t inl(uint16_t port)
     return ret;
 }
 
-static inline void mmioWriteByte(uint32_t addr, uint8_t val)
+void mmioWriteByte(uint32_t addr, uint8_t val)
 {
     *((uint8_t *) addr) = val;
 }

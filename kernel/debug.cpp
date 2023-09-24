@@ -33,8 +33,8 @@ void debugPrint(char* format, ...)
 
             switch(c) {
 				case '%':
-					debugPort.writeChar('%');
-					screenPrintChar('%');
+					debugPort.writeString("%");
+					screenPrint("%");
 					break;
                 case 'd':
 					prefix="";
@@ -57,8 +57,8 @@ void debugPrint(char* format, ...)
 					n = va_arg(args, long);
 
 					if (n==0) {
-						debugPort.writeChar('0');
-						screenPrintChar('0');
+						debugPort.writeString("0");
+						screenPrint("0");
 					}
 
                     static char buf[32] = {0};

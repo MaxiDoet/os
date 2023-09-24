@@ -4,6 +4,9 @@ class CirrusDevice {
     private:
         PciDevice *dev;
 
+        uint32_t fb;
+        uint32_t mmio;
+
         void crtcWrite(uint8_t index, uint8_t value);
 
     public:
