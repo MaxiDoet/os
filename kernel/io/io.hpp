@@ -1,5 +1,8 @@
 #include <inttypes.h>
 
+#ifndef _io_h
+#define _io_h
+
 static inline void outb(uint16_t port, uint8_t val)
 {
     asm volatile ( "outb %0, %1" : : "a"(val), "Nd"(port) );
@@ -45,7 +48,9 @@ static inline uint32_t inl(uint16_t port)
     return ret;
 }
 
-void mmioWriteByte(uint32_t addr, uint8_t val)
+static inline void mmioWriteByte(uint32_t addr, uint8_t val)
 {
     *((uint8_t *) addr) = val;
 }
+
+#endif

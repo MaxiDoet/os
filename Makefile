@@ -33,5 +33,5 @@ clean:
 	rm -f os.bin
 
 run:
-	#qemu-system-i386 -boot d -cdrom os.iso -hda hdd.img -device AC97
-	../qemu/build/qemu-system-i386 -vga cirrus -boot d -cdrom os.iso -hda hdd.img -device AC97
+	qemu-system-i386 -boot d -cdrom os.iso -hda hdd.img -device AC97 -vga cirrus
+	#../qemu/build/qemu-system-i386 -vga cirrus -boot d -cdrom os.iso -hda hdd.img -device AC97
