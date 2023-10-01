@@ -137,7 +137,7 @@ CirrusDevice::CirrusDevice(PciDevice *dev)
     this->dev = dev;
     this->mmio = 0xB4000000; // Don't ask!
 
-    this->dev->enableBusMastering();    
+    this->dev->enableBusMastering();
 }
 
 void CirrusDevice::setMode(vgaVideoMode videoMode)
@@ -233,10 +233,9 @@ void CirrusDevice::drawAccelaratedRectangle(uint16_t x, uint16_t y, uint16_t wid
     grWrite(REG_BITBLT_ROP, 0x0D);
 
     uint32_t localColor = convertToDepth(color, videoMode.colorDepth);
-    debugPrint("%x\n", localColor);
     grWrite(REG_BITBLT_FOREGROUND_COLOR_BYTE_0, localColor & 0xFF);
-    if (videoMode.colorDepth >= 16) (REG_BITBLT_FOREGROUND_COLOR_BYTE_1, (localColor >> 8) & 0xFF);
-    if (videoMode.colorDepth == 24) (REG_BITBLT_FOREGROUND_COLOR_BYTE_2, (localColor >> 16) & 0xFF);
+    if (videoMode.colorDepth >= 16) grWrite(REG_BITBLT_FOREGROUND_COLOR_BYTE_1, (localColor >> 8) & 0xFF);
+    if (videoMode.colorDepth == 24) grWrite(REG_BITBLT_FOREGROUND_COLOR_BYTE_2, (localColor >> 16) & 0xFF);
 
     // Width
     grWrite(REG_BITBLT_WIDTH_BYTE_0, (width * bytesPerPixel - 1) & 0xFF);

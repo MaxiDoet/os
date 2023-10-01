@@ -8,9 +8,13 @@ class AtaDevice {
         bool master;
         bool isReady;
 
+        char *model;
+
         void print(char *str);
-        void waitBusy();
-        void waitData();
+        uint8_t waitBusy();
+        uint8_t waitData();
+
+        
     public:
         AtaDevice(bool primary, bool master);
 

@@ -2,6 +2,7 @@
 #include <io/io.hpp>
 #include <fs/fs.hpp>
 #include <mem/heap.hpp>
+#include <lib/string.hpp>
 #include <debug.hpp>
 
 #define REG_DATA                0x0
@@ -13,21 +14,27 @@
 #define REG_STATUS              0x7
 #define REG_COMMAND             0x7
 
+#define STATUS_ERR              (1 << 0)
 #define STATUS_DRQ              (1 << 3)
 #define STATUS_BSY              (1 << 7)
 
 #define COMMAND_READ_SECTORS    0x20
+#define COMMAND_IDENTIFY        0xEC
 
 void AtaDevice::print(char *str)
 {
     debugPrint("ATA | %s->%s | %s\n", primary ? "Primary" : "Secondary", master ? "Master" : "Slave", str);
 }
 
-void AtaDevice::waitBusy()
+uint8_t AtaDevice::waitBusy()
 {
     uint8_t status = inb(ioBase + REG_STATUS);
 
     while ((status & STATUS_BSY)) {
+        if (status & STATUS_ERR) {
+            return 0;
+        }
+
         asm volatile ("nop");
 		asm volatile ("nop");
 		asm volatile ("nop");
@@ -36,16 +43,26 @@ void AtaDevice::waitBusy()
 
         status = inb(ioBase + REG_STATUS);
     }
+
+    return 1;
 }
 
-void AtaDevice::waitData()
+uint8_t AtaDevice::waitData()
 {
     uint8_t status = inb(ioBase + REG_STATUS);
 
     while (!(status & STATUS_DRQ)) {
+        if (status & STATUS_ERR) {
+            return 0;
+        }
+        
         status = inb(ioBase + REG_STATUS);
     }
+
+    return 1;
 }
+
+
 
 AtaDevice::AtaDevice(bool primary, bool master)
 {
@@ -61,8 +78,6 @@ AtaDevice::AtaDevice(bool primary, bool master)
         return;
     }
 
-    print("Init");
-
     // Select drive
     outb(ioBase + REG_SELECT, master ? 0xA0 : 0xB0);
 
@@ -72,7 +87,36 @@ AtaDevice::AtaDevice(bool primary, bool master)
     outb(ioBase + REG_LBA_MID, 0);
     outb(ioBase + REG_LBA_HIGH, 0);
 
-    // Todo: Identify command
+    // Check if device is connected
+    if (!inb(ioBase + REG_STATUS)) {
+        print("Not connected");
+        return;
+    }
+
+    /* Extract model number throught identify command */
+    outb(ioBase + REG_COMMAND, COMMAND_IDENTIFY);
+
+    if (!waitBusy()) return;
+    if (!waitData()) return;
+
+    uint8_t info[512];
+    for (int i=0; i < 256; i++) {
+		uint16_t data = inw(ioBase + REG_DATA);
+
+		info[i * 2] = (data >> 8);
+		info[i * 2 + 1] = data & 0xFF;
+	}
+
+    // Find tail of the string
+	uint32_t tail = 40;
+	while (tail > 0 && ((char) info[0x36 + tail - 1]) == ' ') {
+		tail--;
+	}
+
+	memcpy(model, info + 0x36, tail);
+
+    print("Init");
+    print(model);
 }
 
 void AtaDevice::read(uint32_t lba, uint8_t sectorCount, uint8_t *buf)

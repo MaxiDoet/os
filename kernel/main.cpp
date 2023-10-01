@@ -39,6 +39,15 @@ extern "C" void kmain()
 	uint32_t heapSize = 100000000;
     heapInit(heapStart, heapSize);
 
+    // Init ATA drives
+    AtaDevice ata0(true, true);
+    AtaDevice ata1(true, false);
+    AtaDevice ata2(false, true);
+    AtaDevice ata3(false, false);
+
+    StorageDevice sd0((void *) &ata0, STORAGE_DEVICE_BUS_TYPE_ATA, "ata0");
+    fsProbe(&sd0);
+
     pciScan();
 
     PciDevice *list = (PciDevice *) heapAlloc(sizeof(PciDevice) * 256);
@@ -49,15 +58,6 @@ extern "C" void kmain()
     }
 
     heapFree(list);
-
-    // Init ATA drives
-    AtaDevice ata0(true, true);
-    AtaDevice ata1(true, false);
-    AtaDevice ata2(false, true);
-    AtaDevice ata3(false, false);
-
-    StorageDevice sd0((void *) &ata0, STORAGE_DEVICE_BUS_TYPE_ATA, "ata0");
-    fsProbe(&sd0);
 
     mouseInit();
 
@@ -70,43 +70,43 @@ extern "C" void kmain()
 
     // Init Cirrus
     list = (PciDevice *) heapAlloc(sizeof(PciDevice) * pciCount(0x1013, 0x00B8));
-    pciFind(list, 0x1013, 0x00B8);
-    CirrusDevice cirrusDev(&list[0]);
-    cirrusDev.setMode(videoMode);
+    listLength = pciFind(list, 0x1013, 0x00B8);
 
-    uint16_t cursorX = 400, cursorY = 300;
-    while(true) {
-        mouseInputState state = mouseRead();
+    if (listLength) {
+        CirrusDevice cirrusDev(&list[0]);
+        cirrusDev.setMode(videoMode);
 
-        cursorX += state.x;
-        cursorY -= state.y;
+        uint16_t cursorX = 400, cursorY = 300;
+        while(true) {
+            mouseInputState state = mouseRead();
 
-        if (cursorX < 0) cursorX = 0;
-        if (cursorX > 799) cursorX = 799;
-        if (cursorY > 599) cursorY = 599;
-        if (cursorY < 0) cursorY = 0;
+            cursorX += state.x;
+            cursorY -= state.y;
 
-        cirrusDev.drawAccelaratedRectangle(20, 40, 100, 80, 0xFF0000);
+            if (cursorX < 0) cursorX = 0;
+            if (cursorX > 799) cursorX = 799;
+            if (cursorY > 599) cursorY = 599;
+            if (cursorY < 0) cursorY = 0;
 
-        cirrusDev.drawAccelaratedRectangle(cursorX, cursorY, 10, 10, 0xFFFFFF);
+            cirrusDev.drawAccelaratedRectangle(20, 40, 100, 80, 0xFF0000);
 
-        cirrusDev.drawAccelaratedRectangle(0, 0, 800, 600, 0x000000);
+            cirrusDev.drawAccelaratedRectangle(cursorX, cursorY, 10, 10, 0xFFFFFF);
+
+            cirrusDev.drawAccelaratedRectangle(0, 0, 800, 600, 0x000000);
+        }
     }
-
-    /*
-    for (int i=0; i < 800 * 600; i++) {
-        ((uint16_t *) cirrusDev.getFramebuffer())[i] = 0x632c;
-    }
-    */
-
-    // Read audio file
-    //uint8_t *buf = (uint8_t *) heapAlloc(25548514);
-    //fsRead("/audio.wav", buf);
 
     // Init AC97
-    //list = (PciDevice *) heapAlloc(sizeof(PciDevice) * pciCount(0x8086, 0x2415));
-    //pciFind(list, 0x8086, 0x2415);
-    //AC97Device ac97Dev(&list[0]);
+    list = (PciDevice *) heapAlloc(sizeof(PciDevice) * pciCount(0x8086, 0x2415));
+    listLength = pciFind(list, 0x8086, 0x24C5);
+    
+    if (listLength) {
+        AC97Device ac97Dev(&list[0]);
 
-    //ac97Dev.play(buf, 25548514);
+        // Read audio file
+        uint8_t *buf = (uint8_t *) heapAlloc(25548514);
+        fsRead("/audio.wav", buf);
+
+        ac97Dev.play(buf, 25548514);
+    }
 }
