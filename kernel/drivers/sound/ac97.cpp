@@ -1,4 +1,4 @@
-#include <drivers/ac97.hpp>
+#include <drivers/sound/ac97.hpp>
 #include <cpu/irq.hpp>
 #include <io/io.hpp>
 #include <mem/heap.hpp>

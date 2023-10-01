@@ -1,17 +1,7 @@
 section .multiboot
     dd 0x1badb002
-    dd 7
-    dd -(0x1badb002 + 7)
-    dd 0
-    dd 0
-    dd 0
-    dd 0
-    dd 0
-    dd 1    ; Change that to 1 to use text mode
-    dd 800
-    dd 600
-    dd 24
-    ;space 4 * 13
+    dd 3
+    dd -(0x1badb002 + 3)
 
 section .bootstrap_stack nobits
 stack_bottom:

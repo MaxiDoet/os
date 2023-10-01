@@ -29,6 +29,15 @@ inline void *memcpy(void *dest, const void *src, uint32_t n)
     return dest;
 }
 
+inline void memset(void *dest, const uint8_t value, uint32_t n)
+{
+    uint8_t *cdest = (uint8_t *) dest;
+
+    while (n-- > 0) {
+        *cdest++ = value;
+    }
+}
+
 inline uint32_t strsplit(char *str, char c)
 {
 	int i=0;
