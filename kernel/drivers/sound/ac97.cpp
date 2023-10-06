@@ -227,5 +227,27 @@ AC97Device::AC97Device(PciDevice *dev)
 	// Set PCM output volume
 	outw(dev->getBar(0).ioBase + NAM_PCM_VOL, 0x0000);
 
-	debugPrint("AC97 | Init done\n");
+	// Read channel capabilities
+	uint32_t globalStatus = inl(dev->getBar(0).ioBase + GLOB_STA);
+
+	uint8_t maxChannels = 0;
+	switch((globalStatus >> 20) & 0x3) {
+		case 0:
+			maxChannels = 2;
+			break;
+
+		case 1:
+			maxChannels = 4;
+			break;
+
+		case 10:
+			maxChannels = 6;
+			break;
+
+		default:
+			maxChannels = 2;
+			break;
+	}
+
+	debugPrint("AC97 | Init done | Channels: %d\n", maxChannels);
 }

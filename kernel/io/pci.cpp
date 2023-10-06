@@ -72,6 +72,8 @@ uint8_t pciFind(PciDevice *list, uint16_t vendorId, uint16_t deviceId)
         if (pciDevices[i].getVendorId() == vendorId && pciDevices[i].getDeviceId() == deviceId) {        
             memcpy(&list[count++], &pciDevices[i], sizeof(PciDevice));
         }
+
+        
     }
 
     return count;

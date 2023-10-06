@@ -76,6 +76,7 @@ extern "C" void kmain()
         CirrusDevice cirrusDev(&list[0]);
         cirrusDev.setMode(videoMode);
 
+        /*
         uint16_t cursorX = 400, cursorY = 300;
         while(true) {
             mouseInputState state = mouseRead();
@@ -94,11 +95,12 @@ extern "C" void kmain()
 
             cirrusDev.drawAccelaratedRectangle(0, 0, 800, 600, 0x000000);
         }
+        */
     }
 
     // Init AC97
     list = (PciDevice *) heapAlloc(sizeof(PciDevice) * pciCount(0x8086, 0x2415));
-    listLength = pciFind(list, 0x8086, 0x24C5);
+    listLength = pciFind(list, 0x8086, 0x2415);
     
     if (listLength) {
         AC97Device ac97Dev(&list[0]);
