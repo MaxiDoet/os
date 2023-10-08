@@ -51,34 +51,6 @@ uint8_t pciGetList(PciDevice *list)
     return pciDevicesIndex;
 }
 
-uint8_t pciCount(uint16_t vendorId, uint16_t deviceId)
-{
-    uint8_t count = 0;
-
-    for (uint8_t i=0; i < pciDevicesIndex; i++) {        
-        if (pciDevices[i].getVendorId() == vendorId && pciDevices[i].getDeviceId() == deviceId) {    
-            count++;
-        }
-    }
-
-    return count;
-}
-
-uint8_t pciFind(PciDevice *list, uint16_t vendorId, uint16_t deviceId)
-{
-    uint8_t count = 0;
-
-    for (uint8_t i=0; i < pciDevicesIndex; i++) {
-        if (pciDevices[i].getVendorId() == vendorId && pciDevices[i].getDeviceId() == deviceId) {        
-            memcpy(&list[count++], &pciDevices[i], sizeof(PciDevice));
-        }
-
-        
-    }
-
-    return count;
-}
-
 void pciInfo(PciDevice *dev)
 {
     debugPrint("PCI | %d/%d/%d | %x %x | %s\n", dev->getBus(), dev->getSlot(), dev->getFunction(), dev->getVendorId(), dev->getDeviceId(), classNames[dev->getClassCode()]);

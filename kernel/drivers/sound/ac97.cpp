@@ -1,6 +1,7 @@
 #include <drivers/sound/ac97.hpp>
 #include <cpu/irq.hpp>
 #include <io/io.hpp>
+#include <dev/dev.hpp>
 #include <mem/heap.hpp>
 #include <lib/string.hpp>
 #include <debug.hpp>
@@ -250,4 +251,12 @@ AC97Device::AC97Device(PciDevice *dev)
 	}
 
 	debugPrint("AC97 | Init done | Channels: %d\n", maxChannels);
+
+	deviceAdd({
+        .name = "AC97 Sound Card",
+        .type = DEVICE_TYPE_SOUND_CARD,
+        .busType = BUS_TYPE_PCI,
+        .busData = dev,
+        .driverData = this
+    });
 }

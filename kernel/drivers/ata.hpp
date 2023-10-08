@@ -13,7 +13,7 @@ class AtaDevice {
         void print(char *str);
         uint8_t waitBusy();
         uint8_t waitData();
-
+        void identify(uint8_t data[512]);
         
     public:
         AtaDevice(bool primary, bool master);

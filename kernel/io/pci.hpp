@@ -52,8 +52,6 @@ class PciDevice {
 
 void pciScan();
 uint8_t pciGetList(PciDevice *list);
-uint8_t pciCount(uint16_t vendorId, uint16_t deviceId);
-uint8_t pciFind(PciDevice *list, uint16_t vendorId, uint16_t deviceId);
 void pciInfo(PciDevice *dev);
 
 #endif

@@ -1,5 +1,7 @@
 #include <drivers/rtc.hpp>
 #include <io/io.hpp>
+#include <dev/dev.hpp>
+#include <debug.hpp>
 
 #define ADDRESS_PORT    0x70
 #define DATA_PORT       0x71
@@ -17,7 +19,7 @@
 #define STATUS_B_2412   (1 << 1)
 #define STATUS_B_DM     (1 << 2)
 
-uint8_t RtcDevice::readReg(uint8_t reg)
+uint8_t readReg(uint8_t reg)
 {
     if (reg == REG_STATUS_A || reg == REG_STATUS_A) {
         outb(ADDRESS_PORT, reg);
@@ -41,7 +43,16 @@ uint8_t RtcDevice::readReg(uint8_t reg)
     }
 }
 
-Time RtcDevice::read()
+void Rtc::init()
+{
+    deviceAdd({
+        .name = "Real Time Clock",
+        .type = DEVICE_TYPE_RTC,
+        .busType = BUS_TYPE_IO
+    });
+}
+
+Time Rtc::read()
 {
     Time time;
 

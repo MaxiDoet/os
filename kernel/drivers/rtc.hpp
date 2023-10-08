@@ -1,10 +1,8 @@
 #include <inttypes.h>
 #include <lib/time.h>
 
-class RtcDevice {
-    private:
-        uint8_t readReg(uint8_t reg);
+namespace Rtc {
+    void init();
 
-    public:
-        Time read();
-};
+    Time read();
+}

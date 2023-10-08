@@ -14,6 +14,7 @@
 
 #define MCR_LOOPBACK    (1 << 4)
 
+#define LSR_DR          (1 << 0)
 #define LSR_THRE        (1 << 5)
 
 bool SerialPort::transmitEmpty()
@@ -27,11 +28,22 @@ bool SerialPort::transmitEmpty()
     return false;
 }
 
+bool SerialPort::dataReady()
+{
+    uint8_t lsr = inb(port + REG_LSR);
+
+    if (lsr & LSR_DR) {
+        return true;
+    }
+
+    return false;
+}
+
 SerialPort::SerialPort(uint16_t port)
 {
     this->port = port;
 
-    outb(port + REG_IER, 0x00);         // Disable all interrupts
+    outb(port + REG_IER, 0x01);         // Enable data interrupts
     outb(port + REG_LCR, LCR_DLAB);     // Unlock divisor registers
     outb(port + REG_DIVISOR_LSB, 12);   // 9600 Baud
     outb(port + REG_DIVISOR_MSB, 0);
@@ -72,4 +84,11 @@ void SerialPort::writeString(char *str)
 
         str++;
     }
+}
+
+char SerialPort::readChar()
+{
+    while (!dataReady()) {}
+
+    return (char) inb(port + REG_DATA);
 }

@@ -1,6 +1,7 @@
 #include <drivers/video/cirrus.hpp>
 #include <drivers/video/vga.hpp>
 #include <io/io.hpp>
+#include <dev/dev.hpp>
 #include <lib/string.hpp>
 #include <debug.hpp>
 
@@ -138,6 +139,14 @@ CirrusDevice::CirrusDevice(PciDevice *dev)
     this->mmio = 0xB4000000; // Don't ask!
 
     this->dev->enableBusMastering();
+
+    deviceAdd({
+        .name = "Cirrus Graphics Card",
+        .type = DEVICE_TYPE_GRAPHICS_CARD,
+        .busType = BUS_TYPE_PCI,
+        .busData = dev,
+        .driverData = this
+    });
 }
 
 void CirrusDevice::setMode(vgaVideoMode videoMode)

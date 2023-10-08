@@ -8,11 +8,13 @@ class SerialPort {
         uint16_t port;
 
         bool transmitEmpty();
+        bool dataReady();
     public:
         SerialPort(uint16_t port);
 
         void writeChar(char c);
         void writeString(char *str);
+        char readChar();
 };
 
 #endif

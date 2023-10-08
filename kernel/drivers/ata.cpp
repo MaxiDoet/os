@@ -1,6 +1,7 @@
 #include <drivers/ata.hpp>
 #include <io/io.hpp>
 #include <fs/fs.hpp>
+#include <dev/dev.hpp>
 #include <mem/heap.hpp>
 #include <lib/string.hpp>
 #include <debug.hpp>
@@ -62,7 +63,20 @@ uint8_t AtaDevice::waitData()
     return 1;
 }
 
+void AtaDevice::identify(uint8_t buffer[512])
+{
+    outb(ioBase + REG_COMMAND, COMMAND_IDENTIFY);
 
+    if (!waitBusy()) return;
+    if (!waitData()) return;
+
+    for (int i=0; i < 256; i++) {
+		uint16_t data = inw(ioBase + REG_DATA);
+
+		buffer[i * 2] = (data >> 8);
+	    buffer[i * 2 + 1] = data & 0xFF;
+	}
+}
 
 AtaDevice::AtaDevice(bool primary, bool master)
 {
@@ -94,29 +108,26 @@ AtaDevice::AtaDevice(bool primary, bool master)
     }
 
     /* Extract model number throught identify command */
-    outb(ioBase + REG_COMMAND, COMMAND_IDENTIFY);
-
-    if (!waitBusy()) return;
-    if (!waitData()) return;
-
-    uint8_t info[512];
-    for (int i=0; i < 256; i++) {
-		uint16_t data = inw(ioBase + REG_DATA);
-
-		info[i * 2] = (data >> 8);
-		info[i * 2 + 1] = data & 0xFF;
-	}
+    uint8_t data[512];
+    identify(data);
 
     // Find tail of the string
 	uint32_t tail = 40;
-	while (tail > 0 && ((char) info[0x36 + tail - 1]) == ' ') {
+	while (tail > 0 && ((char) data[0x36 + tail - 1]) == ' ') {
 		tail--;
 	}
 
-	memcpy(model, info + 0x36, tail);
+	memcpy(model, data + 0x36, tail);
 
-    print("Init");
     print(model);
+
+    deviceAdd({
+        .name = model,
+        .type = DEVICE_TYPE_HDD,
+        .busType = BUS_TYPE_ATA,
+        .busData = nullptr,
+        .driverData = this
+    });
 }
 
 void AtaDevice::read(uint32_t lba, uint8_t sectorCount, uint8_t *buf)

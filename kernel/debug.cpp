@@ -36,15 +36,23 @@ void debugPrint(char* format, ...)
 					debugPort.writeString("%");
 					screenPrint("%");
 					break;
+
+				case 'c':
+					cc = va_arg(args, int);
+					debugPort.writeChar(cc);
+					break;
+
                 case 'd':
 					prefix="";
 					base=10;
                     goto print_num;
+
 				case 's':
 					s = va_arg(args, char *);
 					debugPort.writeString(s);
 					screenPrint(s);
 					break;
+
 				case 'x':
 					prefix="";
 					base=16;
