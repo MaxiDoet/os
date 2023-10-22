@@ -77,10 +77,10 @@ void initPciDevices()
         if (device->getVendorId() == 0x8086 && device->getDeviceId() == 0x2415) {
             AC97Device ac97Dev(&list[i]);
 
-            uint8_t *audioBuffer = (uint8_t *) heapAlloc(25548514);
-            fsRead("/audio.wav", audioBuffer);
+            //uint8_t *audioBuffer = (uint8_t *) heapAlloc(25548514);
+            //fsRead("/audio.wav", audioBuffer);
 
-            ac97Dev.play(audioBuffer, 25548514);
+            //ac97Dev.play(audioBuffer, 25548514);
         }
     }
 
@@ -106,7 +106,7 @@ extern "C" void kmain()
     heapInit(heapStart, heapSize);
 
     /* Init Platform devices */
-    
+
     // Init debugging over serial port
     debugInit(com0);
     irqInstallHandler(4, debugIrqHandler, &com0);

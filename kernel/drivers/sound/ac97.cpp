@@ -92,15 +92,15 @@ void AC97Device::writeSingleBuffer(uint8_t *data, uint16_t size)
 		return;
 	}
 
-    debugPrint("AC97 | write | size: %d | wp: %d\n", size, bufDescriptorsWp);
-
     AC97BufDescriptor *desc = &bufDescriptors[bufDescriptorsWp];
 
     desc->addr = (uint32_t) data;
 	desc->length = size;
 	desc->ioc = 1;
 
-    if (bufDescriptorsWp == LAST_VALID_INDEX) desc->bup = 1;
+    desc->bup = (bufDescriptorsWp == LAST_VALID_INDEX) ? 1 : 0;
+
+	debugPrint("AC97 | write | size: %d | wp: %d %s\n", size, bufDescriptorsWp, (desc->bup) ? "BUP" : "");
 
     bufDescriptorsWp = (bufDescriptorsWp + 1) % LAST_VALID_INDEX;
 }
@@ -218,6 +218,9 @@ AC97Device::AC97Device(PciDevice *dev)
 	this->dev = dev;
 
     dev->enableBusMastering();
+
+	bufDescriptorsRp = 0;
+	bufDescriptorsWp = 0;
 
 	irqInstallHandler(dev->getIrq(), AC97IrqHandler, this);
 
