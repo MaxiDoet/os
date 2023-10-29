@@ -13,7 +13,7 @@ uint32_t Ext2Fs::blockToSector(uint32_t block)
 void Ext2Fs::readBlock(uint32_t block, uint8_t *buf)
 {
     if (block > sb->blocksTotal) {
-        debugPrint("EXT2 | Attempted to read invalid block!\n");
+        debugPrint("EXT2 | Attempted to read invalid block! (%d)\n", block);
     }
 
     dev->read(startSector + blockToSector(block), blockSize / 512, buf);
@@ -78,8 +78,7 @@ void Ext2Fs::readInode(uint32_t inode, Ext2Inode *buf)
 	uint8_t *blockBuf = (uint8_t *) heapAlloc(blockSize);
 	readBlock(bgDescriptor->inodeTableStart + block, blockBuf);
 
-	Ext2Inode *inodeTemp = (Ext2Inode *) blockBuf;
-	memcpy(buf, &inodeTemp[blockIndex], sizeof(Ext2Inode));
+	memcpy(buf, &blockBuf[blockIndex * inodeSize], sizeof(Ext2Inode));
 
 	heapFree(blockBuf);
 }
@@ -100,6 +99,8 @@ uint32_t Ext2Fs::findInode(char* path)
 			uint32_t block = inodeBuf->directBlockPtr[i];
 			readBlock(block, rootBuf);
 			dir = (Ext2DirEntry *) rootBuf;
+
+			debugPrint("block: %d\n", block);
 
 			while(dir->inode != 0) {
 				char* name = (char *) heapAlloc(dir->nameLength + 1);
@@ -145,14 +146,16 @@ Ext2Fs::Ext2Fs(StorageDevice *dev, uint32_t startLba) {
 
 	blockSize = (1024 << sb->blockSize);
 	inodesPerBlock = blockSize / inodeSize;
-	blockGroupsTotal = sb->blocksTotal / sb->blocksPerGroup;
+	blockGroupsTotal = sb->blocksTotal / sb->blocksPerGroup + 1;
  
 	debugPrint("EXT2 | Block size: %d Inode size: %d\n", blockSize, inodeSize);
 
 	/* Read block group descriptor table */
 	uint8_t sectorCount = (sizeof(Ext2BgDescriptor) * blockGroupsTotal) / 512 + 1;
 	bgdt = (Ext2BgDescriptor *) heapAlloc(sectorCount * 512);
-	dev->read(startLba + blockToSector(2), sectorCount, (uint8_t *) bgdt);
+	
+	//dev->read(startLba + blockToSector(2), sectorCount, (uint8_t *) bgdt);
+	readBlock(1, (uint8_t *) bgdt);
 
 	// Init buffers
     rootBuf = (uint8_t *) heapAlloc(blockSize);

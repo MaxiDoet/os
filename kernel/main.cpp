@@ -20,6 +20,26 @@
 #include <lib/string.hpp>
 #include <debug.hpp>
 
+#include <lib/bmp.hpp>
+
+PciDevice *videoDev;
+
+void desktopLoop()
+{
+    CirrusDevice cirrusDevice(videoDev);
+
+    cirrusDevice.setMode({
+        .width = 800,
+        .height = 600,
+        .colorDepth = VGA_COLOR_DEPTH_24,
+        .text = false
+    });
+    
+    while(true) {
+        cirrusDevice.drawRectangle(0, 0, 800, 600, 0x4D4D4D);
+    }
+}
+
 void printDevTree()
 {
     Device *list = (Device *) heapAlloc(256 * sizeof(Device));
@@ -61,16 +81,12 @@ void initPciDevices()
 
         // Cirrus
         if (device->getVendorId() == 0x1013 && device->getDeviceId() == 0x00B8) {
-            CirrusDevice cirrusDev(&list[i]);
+            videoDev = &list[i];
 
-            Pit::sleep(1000);
-        
-            cirrusDev.setMode({
-                .width = 800,
-                .height = 600,
-                .colorDepth = VGA_COLOR_DEPTH_24,
-                .text = false
-            });
+            //uint8_t *backgroundBuffer = (uint8_t *) heapAlloc(480056);
+            //fsRead("/background.bmp", backgroundBuffer);
+            //BmpHeader *bmpHeader = (BmpHeader *) backgroundBuffer;
+            //cirrusDev.copyRectangle(0, 0, 400, 400, backgroundBuffer + bmpHeader->dataOffset);
         }
 
         // AC97
@@ -128,6 +144,9 @@ extern "C" void kmain()
 
     pciScan();
     initPciDevices();
+
+    Pit::sleep(1000);
+    desktopLoop();
 
     while (true) {
 

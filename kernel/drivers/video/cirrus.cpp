@@ -51,18 +51,26 @@
 #define REG_BITBLT_HEIGHT_BYTE_1                            0x23
 #define REG_BITBLT_DESTINATION_PITCH_BYTE_0                 0x24
 #define REG_BITBLT_DESTINATION_PITCH_BYTE_1                 0x25
+#define REG_BITBLT_SOURCE_PITCH_BYTE_0                      0x26
+#define REG_BITBLT_SOURCE_PITCH_BYTE_1                      0x27
 #define REG_BITBLT_DESTINATION_START_BYTE_0                 0x28
 #define REG_BITBLT_DESTINATION_START_BYTE_1                 0x29
 #define REG_BITBLT_DESTINATION_START_BYTE_2                 0x2A
+#define REG_BITBLT_SOURCE_START_BYTE_0                      0x2C
+#define REG_BITBLT_SOURCE_START_BYTE_1                      0x2D
+#define REG_BITBLT_SOURCE_START_BYTE_2                      0x2E
 #define REG_BITBLT_BLT_MODE                                 0x30
 #define REG_BITBLT_BLT_START_STATUS                         0x31
 #define REG_BITBLT_ROP                                      0x32
 #define REG_BITBLT_BLT_MODE_EXTENSIONS                      0x33
 
+#define ROP_SCRCOPY                                         0x0D
+
 #define GR_GRAPHICS_MODE_256_COLOR                          (1 << 6)
 
 #define GR_MISC_GRAPHICS_MODE                               (1 << 0)
 
+#define BITBLT_BLT_MODE_SYSTEM_MEMORY                       (1 << 2)
 #define BITBLT_BLT_MODE_COLOR_EXPAND_WIDTH_8BBP             0x00
 #define BITBLT_BLT_MODE_COLOR_EXPAND_WIDTH_16BPP            0x10
 #define BITBLT_BLT_MODE_COLOR_EXPAND_WIDTH_24BPP            0x20
@@ -117,6 +125,17 @@ void CirrusDevice::grWrite(uint8_t index, uint8_t value)
     outb(mmio + REG_GR_DATA, value);
 }
 
+uint8_t CirrusDevice::grRead(uint8_t index)
+{
+    uint8_t result = 0;
+
+    outb(mmio + REG_GR_INDEX, index);
+    result = inb(mmio + REG_GR_DATA);
+
+    return result;
+}
+
+
 void CirrusDevice::crtcWrite(uint8_t index, uint8_t value)
 {
     outb(mmio + REG_CRTC_INDEX, index);
@@ -131,6 +150,16 @@ void CirrusDevice::dacWrite(uint8_t value)
     inb(mmio + 0x3C6);
 
     outb(mmio + 0x3C6, value);
+}
+
+// Checks if bitblt engine is ready
+bool CirrusDevice::isReady()
+{
+    uint8_t status;
+
+    status = grRead(REG_BITBLT_BLT_START_STATUS);
+
+    return !(status & BITBLT_BLT_START_STATUS_STATUS);
 }
 
 CirrusDevice::CirrusDevice(PciDevice *dev)
@@ -172,7 +201,7 @@ void CirrusDevice::setMode(vgaVideoMode videoMode)
     crtcWrite(REG_CRTC_VERTICAL_BLANKING_START, 0xFF);
     crtcWrite(REG_CRTC_VERTICAL_BLANKING_END, 0x98);
     crtcWrite(REG_CRTC_LINE_COMPARE, 0x3F);
-    
+
     if (!videoMode.text) {
         grWrite(REG_GR_GRAPHICS_MODE, GR_GRAPHICS_MODE_256_COLOR);
         grWrite(REG_GR_MISC, GR_MISC_GRAPHICS_MODE);
@@ -234,12 +263,14 @@ void *CirrusDevice::getFramebuffer()
     return fb;
 }
 
-void CirrusDevice::drawAccelaratedRectangle(uint16_t x, uint16_t y, uint16_t width, uint16_t height, uint32_t color)
+void CirrusDevice::drawRectangle(uint16_t x, uint16_t y, uint16_t width, uint16_t height, uint32_t color)
 {
+    while (!isReady()) {}
+
     const uint8_t bytesPerPixel = videoMode.colorDepth / 8;
     const uint32_t pitch = bytesPerPixel * videoMode.width;
 
-    grWrite(REG_BITBLT_ROP, 0x0D);
+    grWrite(REG_BITBLT_ROP, ROP_SCRCOPY);
 
     uint32_t localColor = convertToDepth(color, videoMode.colorDepth);
     grWrite(REG_BITBLT_FOREGROUND_COLOR_BYTE_0, localColor & 0xFF);
@@ -258,6 +289,7 @@ void CirrusDevice::drawAccelaratedRectangle(uint16_t x, uint16_t y, uint16_t wid
     grWrite(REG_BITBLT_DESTINATION_PITCH_BYTE_0, pitch & 0xFF);
     grWrite(REG_BITBLT_DESTINATION_PITCH_BYTE_1, (pitch >> 8) & 0x1F);
 
+    // Destination
     uint32_t dest = pitch * y + x * bytesPerPixel;
     grWrite(REG_BITBLT_DESTINATION_START_BYTE_0, dest & 0xFF);
     grWrite(REG_BITBLT_DESTINATION_START_BYTE_1, (dest >> 8) & 0xFF);
@@ -271,8 +303,56 @@ void CirrusDevice::drawAccelaratedRectangle(uint16_t x, uint16_t y, uint16_t wid
         case 24: bltMode |= BITBLT_BLT_MODE_COLOR_EXPAND_WIDTH_24BPP; break;
     }
 
-    grWrite(REG_BITBLT_BLT_MODE, BITBLT_BLT_MODE_COLOR_EXPAND_WIDTH_24BPP | BITBLT_BLT_MODE_ENABLE_8X8_PATTERN | BITBLT_BLT_MODE_ENABLE_COLOR_EXPAND);
+    grWrite(REG_BITBLT_BLT_MODE, bltMode);
     grWrite(REG_BITBLT_BLT_MODE_EXTENSIONS, BITBLT_BLT_MODE_EXTENSIONS_ENABLE_SOLID_COLOR_FILL);
 
     grWrite(REG_BITBLT_BLT_START_STATUS, BITBLT_BLT_START_STATUS_START);
 }
+
+/*
+void CirrusDevice::copyRectangle(uint16_t x, uint16_t y, uint16_t width, uint16_t height, uint8_t *data)
+{
+    while (!isReady()) {}
+
+    const uint8_t bytesPerPixel = videoMode.colorDepth / 8;
+    const uint32_t pitch = videoMode.width * bytesPerPixel;
+
+    grWrite(REG_BITBLT_BLT_START_STATUS, 0x00); // Disable autostart
+
+    grWrite(REG_BITBLT_ROP, ROP_SCRCOPY);
+
+    // Width
+    grWrite(REG_BITBLT_WIDTH_BYTE_0, (width * bytesPerPixel - 1) & 0xFF);
+    grWrite(REG_BITBLT_WIDTH_BYTE_1, ((width * bytesPerPixel - 1) >> 8) & 0x1F);
+
+    // Height
+    grWrite(REG_BITBLT_HEIGHT_BYTE_0, (height - 1) & 0xFF);
+    grWrite(REG_BITBLT_HEIGHT_BYTE_1, ((height- 1) >> 8) & 0x07);
+
+    // Destination pitch
+    grWrite(REG_BITBLT_DESTINATION_PITCH_BYTE_0, pitch & 0xFF);
+    grWrite(REG_BITBLT_DESTINATION_PITCH_BYTE_1, (pitch >> 8) & 0x1F);
+
+    // Source pitch
+    //grWrite(REG_BITBLT_SOURCE_PITCH_BYTE_0, pitch & 0xFF);
+    //grWrite(REG_BITBLT_SOURCE_PITCH_BYTE_1, (pitch >> 8) & 0x1F);
+
+    // Destination
+    uint32_t dest = pitch * y + x * bytesPerPixel;
+    grWrite(REG_BITBLT_DESTINATION_START_BYTE_0, dest & 0xFF);
+    grWrite(REG_BITBLT_DESTINATION_START_BYTE_1, (dest >> 8) & 0xFF);
+    grWrite(REG_BITBLT_DESTINATION_START_BYTE_2, (dest >> 16) & 0x3F);
+
+    // Source
+    grWrite(REG_BITBLT_SOURCE_START_BYTE_0, 0);
+    grWrite(REG_BITBLT_SOURCE_START_BYTE_1, 0);
+    grWrite(REG_BITBLT_SOURCE_START_BYTE_2, 0);
+
+    grWrite(REG_BITBLT_BLT_MODE, BITBLT_BLT_MODE_SYSTEM_MEMORY | (1 << 3));
+    grWrite(REG_BITBLT_BLT_MODE_EXTENSIONS, 0x00);
+
+    grWrite(REG_BITBLT_BLT_START_STATUS, BITBLT_BLT_START_STATUS_START);
+
+    memcpy((void *) (0x000A0000), data, pitch * height);
+}
+*/

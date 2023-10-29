@@ -26,6 +26,17 @@ os.iso: os.bin
 	cp boot/grub.cfg build/boot/grub/grub.cfg
 	grub-mkrescue -o os.iso build
 
+hdd: build/hdd.img
+build/hdd.img:
+	# Create empty hdd image
+	dd if=/dev/zero of=build/hdd.img bs=10M count=1
+	
+	# Create gpt table and empty partition
+	(echo g; echo n; echo 1; echo 2048; echo 18431; echo w) | fdisk build/hdd.img
+	
+	# Create ext2 fs
+	mkfs.ext2 -d hdd/ -E offset=$(shell echo 2048*512 | bc) build/hdd.img
+
 clean:
 	rm -f $(obj_files)
 	rm -f *.iso*
@@ -33,5 +44,5 @@ clean:
 	rm -f os.bin
 
 run:
-	qemu-system-i386 -vga cirrus -boot d -cdrom os.iso -hda hdd.img -device AC97 -d trace:vga_cirrus_bitblt_start
-	#../qemu/build/qemu-system-i386 -vga cirrus -boot d -cdrom os.iso -hda hdd.img -device AC97 -d trace:vga_cirrus_bitblt_start
+	qemu-system-i386 -vga cirrus -boot d -cdrom os.iso -hda build/hdd.img -device AC97 -d trace:vga_cirrus_bitblt_start
+	#../qemu/build/qemu-system-i386 -vga cirrus -boot d -cdrom os.iso -hda build/hdd.img -device AC97 -d trace:vga_cirrus_bitblt_start

@@ -12,8 +12,10 @@ class CirrusDevice {
         void acWrite(uint8_t index, uint8_t value);
         void srWrite(uint8_t index, uint8_t value);
         void grWrite(uint8_t index, uint8_t value);
+        uint8_t grRead(uint8_t index);
         void crtcWrite(uint8_t index, uint8_t value);
         void dacWrite(uint8_t value);
+        bool isReady();
 
     public:
         CirrusDevice(PciDevice *dev);
@@ -22,5 +24,6 @@ class CirrusDevice {
         void *getFramebuffer();
 
         /* Accelerated rendering functions */
-        void drawAccelaratedRectangle(uint16_t x, uint16_t y, uint16_t width, uint16_t height, uint32_t color);
+        void drawRectangle(uint16_t x, uint16_t y, uint16_t width, uint16_t height, uint32_t color);
+        //void copyRectangle(uint16_t x, uint16_t y, uint16_t width, uint16_t height, uint8_t *data);
 };
