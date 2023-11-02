@@ -14,6 +14,7 @@
 #include <drivers/video/cirrus.hpp>
 #include <dev/dev.hpp>
 #include <dev/sd.hpp>
+#include <dev/object.hpp>
 #include <fs/fs.hpp>
 #include <mem/heap.hpp>
 #include <io/pci.hpp>
@@ -26,18 +27,27 @@ PciDevice *videoDev;
 
 void desktopLoop()
 {
-    CirrusDevice cirrusDevice(videoDev);
+    CirrusDevice cirrusDev;
+    cirrusInit(&cirrusDev, videoDev);
 
-    cirrusDevice.setMode({
+    vgaVideoMode videoMode = {
         .width = 800,
         .height = 600,
         .colorDepth = VGA_COLOR_DEPTH_24,
         .text = false
-    });
-    
-    while(true) {
-        cirrusDevice.drawRectangle(0, 0, 800, 600, 0x4D4D4D);
-    }
+    };
+
+    nodeCall(nodeQuery("/video/0/setMode"), &videoMode, nullptr);
+
+    CirrusRectangleDrawData rectangleData = {
+        .x = 0,
+        .y = 0,
+        .width = 800,
+        .height = 600,
+        .color = 0x575757
+    };
+
+    nodeCall(nodeQuery("/video/0/drawRectangle"), &rectangleData, nullptr);
 }
 
 void printDevTree()
@@ -126,6 +136,8 @@ extern "C" void kmain()
     // Init debugging over serial port
     debugInit(com0);
     irqInstallHandler(4, debugIrqHandler, &com0);
+
+    nodeRegister("/video", nullptr, nullptr);
 
     Rtc::init();
     Time time = Rtc::read();

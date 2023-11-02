@@ -16,6 +16,20 @@ inline int strcmp(const char *s1, const char *s2)
     return *s1 - *s2;
 }
 
+inline int strlen(const char *s)
+{
+    int i=0;
+    char c = *s;
+
+    while(c != '\0') {
+        i++;
+
+        c = s[i];
+    }
+
+    return i;
+}
+
 inline void *memcpy(void *dest, const void *src, uint32_t n)
 {
     char *cdest;
@@ -44,10 +58,11 @@ inline uint32_t strsplit(char *str, char c)
 
 	while(*str != '\0') {
 		if (*str == c) {
-			i++;
+			return i;
 		}
 
 		str++;
+        i++;
 	}
 
 	return i;
