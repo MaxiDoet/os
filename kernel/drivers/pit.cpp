@@ -59,3 +59,8 @@ void Pit::sleep(uint32_t ticks)
         asm("hlt");
     }
 }
+
+uint32_t Pit::getTicks()
+{
+    return ticksTotal;
+}

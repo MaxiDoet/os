@@ -3,8 +3,9 @@ obj_files := boot/boot.o \
 			 kernel/cpu/gdt.o kernel/cpu/gdt_install.o kernel/cpu/idt.o kernel/cpu/int_handler.o kernel/cpu/irq.o \
 			 kernel/mem/heap.o \
 			 kernel/io/pci.o kernel/io/pci_device.o \
+			 kernel/lib/timer.o \
 			 kernel/fs/fs.o kernel/fs/ext2.o \
-			 kernel/dev/dev.o kernel/dev/sd.o kernel/dev/object.o \
+			 kernel/dev/dev.o kernel/dev/sd.o kernel/dev/node.o \
 			 kernel/drivers/serial.o kernel/drivers/screen.o kernel/drivers/pic.o kernel/drivers/pit.o kernel/drivers/input/mouse.o kernel/drivers/ata.o kernel/drivers/rtc.o kernel/drivers/sound/ac97.o kernel/drivers/video/vga.o kernel/drivers/video/cirrus.o
 
 CXXFLAGS := -m32 -nostdlib -fno-builtin -fno-exceptions -fno-leading-underscore -Wno-write-strings -Ofast -Ikernel
@@ -44,5 +45,5 @@ clean:
 	rm -f os.bin
 
 run:
-	qemu-system-i386 -vga cirrus -boot d -cdrom os.iso -hda build/hdd.img -device AC97 -d trace:vga_cirrus_bitblt_start
+	qemu-system-i386 -vga cirrus -boot d -cdrom os.iso -hda build/hdd.img -device AC97
 	#../qemu/build/qemu-system-i386 -vga cirrus -boot d -cdrom os.iso -hda build/hdd.img -device AC97 -d trace:vga_cirrus_bitblt_start

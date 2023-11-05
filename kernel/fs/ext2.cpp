@@ -100,8 +100,6 @@ uint32_t Ext2Fs::findInode(char* path)
 			readBlock(block, rootBuf);
 			dir = (Ext2DirEntry *) rootBuf;
 
-			debugPrint("block: %d\n", block);
-
 			while(dir->inode != 0) {
 				char* name = (char *) heapAlloc(dir->nameLength + 1);
 				memcpy(name, &dir->nameReserved, dir->nameLength);

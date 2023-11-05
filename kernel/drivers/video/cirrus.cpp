@@ -2,8 +2,9 @@
 #include <drivers/video/vga.hpp>
 #include <io/io.hpp>
 #include <dev/dev.hpp>
-#include <dev/object.hpp>
+#include <dev/node.hpp>
 #include <lib/string.hpp>
+#include <lib/video/features.hpp>
 #include <debug.hpp>
 
 #define REG_AC_INDEX            0x3C0
@@ -162,7 +163,7 @@ bool isBitbltReady(CirrusDevice *dev)
     return !(status & BITBLT_BLT_START_STATUS_STATUS);
 }
 
-void setMode(void *data, void *argument)
+void setMode(void *data, void *argument, void *result)
 {
     CirrusDevice *dev = (CirrusDevice *) data;
     vgaVideoMode videoMode = *((vgaVideoMode *) argument);
@@ -243,9 +244,21 @@ void setMode(void *data, void *argument)
     debugPrint("CIRRUS | Video mode: %dx%d %dbit\n", videoMode.width, videoMode.height, videoMode.colorDepth);
 }
 
+void getMode(void *data, void *argument, void *result)
+{
+    CirrusDevice *dev = (CirrusDevice *) data;
+    
+    *((vgaVideoMode *) result) = dev->videoMode;
+}
+
+void getFeatures(void *data, void *argument, void *result)
+{
+    *((uint8_t *) result) = VIDEO_FEATURE_LINEAR_FRAMEBUFFER | VIDEO_FEATURE_DRAW_RECTANGLE;
+}
+
 /* Accelerated bitblt functions */
 
-void drawRectangle(void *data, void *argument)
+void drawRectangle(void *data, void *argument, void *result)
 {
     CirrusDevice *dev = (CirrusDevice *) data;
     CirrusRectangleDrawData rectangleDrawData = *((CirrusRectangleDrawData *) argument);
@@ -303,6 +316,8 @@ void cirrusInit(CirrusDevice *dev, PciDevice *pciDev)
 
     nodeRegister("/video/0", nullptr, nullptr);
     nodeRegister("/video/0/setMode", dev, setMode);
+    nodeRegister("/video/0/getMode", dev, getMode);
+    nodeRegister("/video/0/getFeatures", dev, getFeatures);
     nodeRegister("/video/0/drawRectangle", dev, drawRectangle);
 }
 

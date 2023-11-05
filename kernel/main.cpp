@@ -14,10 +14,11 @@
 #include <drivers/video/cirrus.hpp>
 #include <dev/dev.hpp>
 #include <dev/sd.hpp>
-#include <dev/object.hpp>
+#include <dev/node.hpp>
 #include <fs/fs.hpp>
 #include <mem/heap.hpp>
 #include <io/pci.hpp>
+#include <lib/timer.hpp>
 #include <lib/string.hpp>
 #include <debug.hpp>
 
@@ -29,7 +30,7 @@ void desktopLoop()
 {
     CirrusDevice cirrusDev;
     cirrusInit(&cirrusDev, videoDev);
-
+    
     vgaVideoMode videoMode = {
         .width = 800,
         .height = 600,
@@ -115,8 +116,11 @@ void initPciDevices()
 
 extern "C" void kmain()
 {
-    // Init serial port
-    SerialPort com0(0x3F8);
+    /* First stage: we have to assume some things, for example the video memory location */
+
+    Pit::init();
+    Timer bootTimer;
+    bootTimer.start();
 
     screenClear();
 
@@ -131,9 +135,9 @@ extern "C" void kmain()
 	uint32_t heapSize = 100000000;
     heapInit(heapStart, heapSize);
 
-    /* Init Platform devices */
-
     // Init debugging over serial port
+    // Init serial port
+    SerialPort com0(0x3F8);
     debugInit(com0);
     irqInstallHandler(4, debugIrqHandler, &com0);
 
@@ -143,7 +147,7 @@ extern "C" void kmain()
     Time time = Rtc::read();
     debugPrint("Booting up on %d/%d/%d %d:%d:%d\n", time.date_month, time.date_day, time.date_year, time.hours, time.minutes, time.seconds);
 
-    Pit::init();
+    /* Second stage: Here we are more dynamic and can scan for different devices or capabilities of the system */
 
     // Init ATA drives
     AtaDevice ata0(true, true);
@@ -156,6 +160,11 @@ extern "C" void kmain()
 
     pciScan();
     initPciDevices();
+
+    bootTimer.stop();
+    debugPrint("Kernel initialization took %d ticks\n", bootTimer.getTicks());
+
+    /* Third stage: Here we leave the kernel */
 
     Pit::sleep(1000);
     desktopLoop();
