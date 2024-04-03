@@ -4,7 +4,7 @@
 #include <io/io.hpp>
 #include <debug.hpp>
 
-uint32_t ticksTotal;
+static uint32_t ticksTotal;
 
 #define REG_CHANNEL_0           0x40
 #define REG_CHANNEL_1           0x41
@@ -25,7 +25,7 @@ void setFreq(uint32_t freq)
 {
     uint16_t reloadValue = 1193182 / freq;
 
-    outb(REG_CHANNEL_0, reloadValue & 0xFF);
+    outb(REG_CHANNEL_0, reloadValue & 0xFF);        
     outb(REG_CHANNEL_0, (reloadValue >> 8) & 0xFF);
 }
 
@@ -33,14 +33,14 @@ void irqHandler(void *privateData)
 {
     ticksTotal++;
 
-    setFreq(1000);
+    setFreq(PIT_FREQ);
 }
 
 void Pit::init()
 {
     outb(REG_MODE, MODE_MODE_2 | MODE_ACCESS_LOHIBYTE | MODE_CHANNEL_0);
 
-    setFreq(1000);
+    setFreq(PIT_FREQ);
 
     irqInstallHandler(0, irqHandler, nullptr);
 

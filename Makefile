@@ -5,7 +5,7 @@ obj_files := boot/boot.o \
 			 kernel/io/pci.o kernel/io/pci_device.o \
 			 kernel/lib/timer.o \
 			 kernel/fs/fs.o kernel/fs/ext2.o \
-			 kernel/dev/dev.o kernel/dev/sd.o kernel/dev/node.o \
+			 kernel/dev/dev.o kernel/dev/sd.o \
 			 kernel/drivers/serial.o kernel/drivers/screen.o kernel/drivers/pic.o kernel/drivers/pit.o kernel/drivers/input/mouse.o kernel/drivers/ata.o kernel/drivers/rtc.o kernel/drivers/sound/ac97.o kernel/drivers/video/vga.o kernel/drivers/video/cirrus.o
 
 CXXFLAGS := -m32 -nostdlib -fno-builtin -fno-exceptions -fno-leading-underscore -Wno-write-strings -Ofast -Ikernel

@@ -14,7 +14,6 @@
 #include <drivers/video/cirrus.hpp>
 #include <dev/dev.hpp>
 #include <dev/sd.hpp>
-#include <dev/node.hpp>
 #include <fs/fs.hpp>
 #include <mem/heap.hpp>
 #include <io/pci.hpp>
@@ -28,8 +27,7 @@ PciDevice *videoDev;
 
 void desktopLoop()
 {
-    CirrusDevice cirrusDev;
-    cirrusInit(&cirrusDev, videoDev);
+    CirrusDevice cirrusDev(videoDev);
     
     vgaVideoMode videoMode = {
         .width = 800,
@@ -38,17 +36,17 @@ void desktopLoop()
         .text = false
     };
 
-    nodeCall(nodeQuery("/video/0/setMode"), &videoMode, nullptr);
+    cirrusDev.setMode(videoMode);
 
-    CirrusRectangleDrawData rectangleData = {
-        .x = 0,
-        .y = 0,
-        .width = 800,
-        .height = 600,
-        .color = 0x575757
-    };
+    cirrusDev.drawRectangle(0, 0, 800, 600, 0x575757);
 
-    nodeCall(nodeQuery("/video/0/drawRectangle"), &rectangleData, nullptr);
+    uint32_t color = 0x121212;
+    for (uint8_t i=0; i < 100; i++) {
+        cirrusDev.drawRectangle(50 + i*100, 50, 200, 200, color);
+        color -= 0x200000;
+
+        Pit::sleep(1000);
+    }
 }
 
 void printDevTree()
@@ -93,11 +91,6 @@ void initPciDevices()
         // Cirrus
         if (device->getVendorId() == 0x1013 && device->getDeviceId() == 0x00B8) {
             videoDev = &list[i];
-
-            //uint8_t *backgroundBuffer = (uint8_t *) heapAlloc(480056);
-            //fsRead("/background.bmp", backgroundBuffer);
-            //BmpHeader *bmpHeader = (BmpHeader *) backgroundBuffer;
-            //cirrusDev.copyRectangle(0, 0, 400, 400, backgroundBuffer + bmpHeader->dataOffset);
         }
 
         // AC97
@@ -141,8 +134,6 @@ extern "C" void kmain()
     debugInit(com0);
     irqInstallHandler(4, debugIrqHandler, &com0);
 
-    nodeRegister("/video", nullptr, nullptr);
-
     Rtc::init();
     Time time = Rtc::read();
     debugPrint("Booting up on %d/%d/%d %d:%d:%d\n", time.date_month, time.date_day, time.date_year, time.hours, time.minutes, time.seconds);
@@ -162,10 +153,9 @@ extern "C" void kmain()
     initPciDevices();
 
     bootTimer.stop();
-    debugPrint("Kernel initialization took %d ticks\n", bootTimer.getTicks());
+    debugPrint("Kernel initialization took %d ms\n", bootTimer.getTicks() / 10);
 
     /* Third stage: Here we leave the kernel */
-
     Pit::sleep(1000);
     desktopLoop();
 

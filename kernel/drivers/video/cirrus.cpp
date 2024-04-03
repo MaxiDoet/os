@@ -2,7 +2,6 @@
 #include <drivers/video/vga.hpp>
 #include <io/io.hpp>
 #include <dev/dev.hpp>
-#include <dev/node.hpp>
 #include <lib/string.hpp>
 #include <lib/video/features.hpp>
 #include <debug.hpp>
@@ -109,96 +108,101 @@
 #define CRTC_MODE_CONTROL_BYTE_MODE                         (1 << 6)
 #define CRTC_MODE_CONTROL_TIMING_ENABLE                     (1 << 7)
 
-void acWrite(CirrusDevice *dev, uint8_t index, uint8_t value)
+void CirrusDevice::acWrite(uint8_t index, uint8_t value)
 {
-    outb(dev->mmio + REG_AC_INDEX, index);
-    outb(dev->mmio + REG_AC_DATA, value);
+    outb(this->mmio + REG_AC_INDEX, index);
+    outb(this->mmio + REG_AC_DATA, value);
 }
 
-void srWrite(CirrusDevice *dev, uint8_t index, uint8_t value)
+void CirrusDevice::srWrite(uint8_t index, uint8_t value)
 {
-    outb(dev->mmio + REG_SR_INDEX, index);
-    outb(dev->mmio + REG_SR_DATA, value);
+    outb(this->mmio + REG_SR_INDEX, index);
+    outb(this->mmio + REG_SR_DATA, value);
 }
 
-void grWrite(CirrusDevice *dev, uint8_t index, uint8_t value)
+void CirrusDevice::grWrite(uint8_t index, uint8_t value)
 {
-    outb(dev->mmio + REG_GR_INDEX, index);
-    outb(dev->mmio + REG_GR_DATA, value);
+    outb(this->mmio + REG_GR_INDEX, index);
+    outb(this->mmio + REG_GR_DATA, value);
 }
 
-uint8_t grRead(CirrusDevice *dev, uint8_t index)
+uint8_t CirrusDevice::grRead(uint8_t index)
 {
     uint8_t result = 0;
 
-    outb(dev->mmio + REG_GR_INDEX, index);
-    result = inb(dev->mmio + REG_GR_DATA);
+    outb(this->mmio + REG_GR_INDEX, index);
+    result = inb(this->mmio + REG_GR_DATA);
 
     return result;
 }
 
-void crtcWrite(CirrusDevice *dev, uint8_t index, uint8_t value)
+void CirrusDevice::crtcWrite(uint8_t index, uint8_t value)
 {
-    outb(dev->mmio + REG_CRTC_INDEX, index);
-    outb(dev->mmio + REG_CRTC_DATA, value);
+    outb(this->mmio + REG_CRTC_INDEX, index);
+    outb(this->mmio + REG_CRTC_DATA, value);
 }
 
-void dacWrite(CirrusDevice *dev, uint8_t value)
+void CirrusDevice::dacWrite(uint8_t value)
 {
-    inb(dev->mmio + 0x3C6);
-    inb(dev->mmio + 0x3C6);
-    inb(dev->mmio + 0x3C6);
-    inb(dev->mmio + 0x3C6);
+    inb(this->mmio + 0x3C6);
+    inb(this->mmio + 0x3C6);
+    inb(this->mmio + 0x3C6);
+    inb(this->mmio + 0x3C6);
 
-    outb(dev->mmio + 0x3C6, value);
+    outb(this->mmio + 0x3C6, value);
 }
 
 // Checks if bitblt engine is ready
-bool isBitbltReady(CirrusDevice *dev)
+bool CirrusDevice::isBitbltReady()
 {
     uint8_t status;
 
-    status = grRead(dev, REG_BITBLT_BLT_START_STATUS);
+    status = this->grRead(REG_BITBLT_BLT_START_STATUS);
 
     return !(status & BITBLT_BLT_START_STATUS_STATUS);
 }
 
-void setMode(void *data, void *argument, void *result)
+CirrusDevice::CirrusDevice(PciDevice *dev)
 {
-    CirrusDevice *dev = (CirrusDevice *) data;
-    vgaVideoMode videoMode = *((vgaVideoMode *) argument);
+    this->dev = dev;
+    this->mmio = 0xB4000000; // Don't ask!
 
-    dev->videoMode = videoMode;
+    dev->enableBusMastering();
+}
+
+void CirrusDevice::setMode(vgaVideoMode videoMode)
+{
+    this->videoMode = videoMode;
 
     const uint8_t bytesPerPixel = videoMode.colorDepth / 8;
     const uint32_t pitch = bytesPerPixel * videoMode.width;
 
-    crtcWrite(dev, REG_CRTC_VERTICAL_SYNC_END, 0x00); // Allow writing to CR0-CR7
-    crtcWrite(dev, REG_CRTC_HORIZONTAL_TOTAL, 0xFF);
-    crtcWrite(dev, REG_CRTC_HORIZONTAL_END, videoMode.width / 8 - 1);
-    crtcWrite(dev, REG_CRTC_HORIZONTAL_BLANKING_START, 0xFF);
-    crtcWrite(dev, REG_CRTC_HORIZONTAL_BLANKING_END, 0xFF);
-    crtcWrite(dev, REG_CRTC_HORIZONTAL_SYNC_START, 0xFF);
-    crtcWrite(dev, REG_CRTC_HORIZONTAL_SYNC_END, 0xFF);
-    crtcWrite(dev, REG_CRTC_VERTICAL_TOTAL, 0xFF);
-    crtcWrite(dev, REG_CRTC_OVERFLOW, 0xF0);
-    crtcWrite(dev, REG_CRTC_VERTICAL_SYNC_START, 0x00);
-    crtcWrite(dev, REG_CRTC_VERTICAL_SYNC_END, 0x00);
-    crtcWrite(dev, REG_CRTC_VERTICAL_END, videoMode.height - 1);
-    crtcWrite(dev, REG_CRTC_PITCH, (pitch / 8) & 0xFF);
-    crtcWrite(dev, REG_CRTC_VERTICAL_BLANKING_START, 0xFF);
-    crtcWrite(dev, REG_CRTC_VERTICAL_BLANKING_END, 0x98);
-    crtcWrite(dev, REG_CRTC_LINE_COMPARE, 0x3F);
+    crtcWrite(REG_CRTC_VERTICAL_SYNC_END, 0x00); // Allow writing to CR0-CR7
+    crtcWrite(REG_CRTC_HORIZONTAL_TOTAL, 0xFF);
+    crtcWrite(REG_CRTC_HORIZONTAL_END, videoMode.width / 8 - 1);
+    crtcWrite(REG_CRTC_HORIZONTAL_BLANKING_START, 0xFF);
+    crtcWrite(REG_CRTC_HORIZONTAL_BLANKING_END, 0xFF);
+    crtcWrite(REG_CRTC_HORIZONTAL_SYNC_START, 0xFF);
+    crtcWrite(REG_CRTC_HORIZONTAL_SYNC_END, 0xFF);
+    crtcWrite(REG_CRTC_VERTICAL_TOTAL, 0xFF);
+    crtcWrite(REG_CRTC_OVERFLOW, 0xF0);
+    crtcWrite(REG_CRTC_VERTICAL_SYNC_START, 0x00);
+    crtcWrite(REG_CRTC_VERTICAL_SYNC_END, 0x00);
+    crtcWrite(REG_CRTC_VERTICAL_END, videoMode.height - 1);
+    crtcWrite(REG_CRTC_PITCH, (pitch / 8) & 0xFF);
+    crtcWrite(REG_CRTC_VERTICAL_BLANKING_START, 0xFF);
+    crtcWrite(REG_CRTC_VERTICAL_BLANKING_END, 0x98);
+    crtcWrite(REG_CRTC_LINE_COMPARE, 0x3F);
 
     if (!videoMode.text) {
-        grWrite(dev, REG_GR_GRAPHICS_MODE, GR_GRAPHICS_MODE_256_COLOR);
-        grWrite(dev, REG_GR_MISC, GR_MISC_GRAPHICS_MODE);
+        grWrite(REG_GR_GRAPHICS_MODE, GR_GRAPHICS_MODE_256_COLOR);
+        grWrite(REG_GR_MISC, GR_MISC_GRAPHICS_MODE);
 
-        srWrite(dev, REG_SR_SEQUENCER_MEMORY_MODE, 0x00);
+        srWrite(REG_SR_SEQUENCER_MEMORY_MODE, 0x00);
 
-        crtcWrite(dev, REG_CRTC_EXTENDED_DISPLAY_CONTROLS, (pitch >> 4) & 0x10);
+        crtcWrite(REG_CRTC_EXTENDED_DISPLAY_CONTROLS, (pitch >> 4) & 0x10);
 
-        crtcWrite(dev, REG_CRTC_MODE_CONTROL, CRTC_MODE_CONTROL_BYTE_MODE | CRTC_MODE_CONTROL_TIMING_ENABLE | 0x02 | 0x01);
+        crtcWrite(REG_CRTC_MODE_CONTROL, CRTC_MODE_CONTROL_BYTE_MODE | CRTC_MODE_CONTROL_TIMING_ENABLE | 0x02 | 0x01);
 
         // Set color depth
         uint8_t srExtendedSequencerMode = SR_EXTENDED_SEQUENCER_MODE_ENABLE_HIGH_RES | SR_EXTENDED_SEQUENCER_MODE_ENABLE_LFB;
@@ -231,94 +235,72 @@ void setMode(void *data, void *argument, void *result)
                 break;
         }
 
-        srWrite(dev, REG_SR_EXTENDED_SEQUENCER_MODE, srExtendedSequencerMode);
-        dacWrite(dev, hiddenDacExtendedMode);
+        srWrite(REG_SR_EXTENDED_SEQUENCER_MODE, srExtendedSequencerMode);
+        dacWrite(hiddenDacExtendedMode);
 
-        dev->fb = (void *) 0xFC000000;
+        this->fb = (void *) 0xFC000000;
 
         for (int i=0; i < videoMode.width * videoMode.height; i++) {
-            ((uint8_t *) dev->fb)[i] = 0x00;
+            ((uint8_t *) this->fb)[i] = 0x00;
         }
     }
 
-    debugPrint("CIRRUS | Video mode: %dx%d %dbit\n", videoMode.width, videoMode.height, videoMode.colorDepth);
-}
-
-void getMode(void *data, void *argument, void *result)
-{
-    CirrusDevice *dev = (CirrusDevice *) data;
-    
-    *((vgaVideoMode *) result) = dev->videoMode;
-}
-
-void getFeatures(void *data, void *argument, void *result)
-{
-    *((uint8_t *) result) = VIDEO_FEATURE_LINEAR_FRAMEBUFFER | VIDEO_FEATURE_DRAW_RECTANGLE;
+    debugPrint("CIRRUS | %dx%d %dbit\n", videoMode.width, videoMode.height, videoMode.colorDepth);
 }
 
 /* Accelerated bitblt functions */
 
-void drawRectangle(void *data, void *argument, void *result)
+void CirrusDevice::drawRectangle(uint16_t x, uint16_t y, uint16_t width, uint16_t height, uint32_t color)
 {
-    CirrusDevice *dev = (CirrusDevice *) data;
-    CirrusRectangleDrawData rectangleDrawData = *((CirrusRectangleDrawData *) argument);
+    while (!this->isBitbltReady()) {}
 
-    while (!isBitbltReady(dev)) {}
+    debugPrint("drawRectangle\n");
 
-    const uint8_t bytesPerPixel = dev->videoMode.colorDepth / 8;
-    const uint32_t pitch = bytesPerPixel * dev->videoMode.width;
+    const uint8_t bytesPerPixel = this->videoMode.colorDepth / 8;
+    const uint32_t pitch = bytesPerPixel * this->videoMode.width;
 
-    grWrite(dev, REG_BITBLT_ROP, ROP_SCRCOPY);
+    this->grWrite(REG_BITBLT_ROP, ROP_SCRCOPY);
 
-    uint32_t localColor = convertToDepth(rectangleDrawData.color, dev->videoMode.colorDepth);
-    grWrite(dev, REG_BITBLT_FOREGROUND_COLOR_BYTE_0, localColor & 0xFF);
-    if (dev->videoMode.colorDepth >= 16) grWrite(dev, REG_BITBLT_FOREGROUND_COLOR_BYTE_1, (localColor >> 8) & 0xFF);
-    if (dev->videoMode.colorDepth == 24) grWrite(dev, REG_BITBLT_FOREGROUND_COLOR_BYTE_2, (localColor >> 16) & 0xFF);
+    uint32_t localColor = convertToDepth(color, this->videoMode.colorDepth);
+    this->grWrite(REG_BITBLT_FOREGROUND_COLOR_BYTE_0, localColor & 0xFF);
+    if (this->videoMode.colorDepth >= 16) this->grWrite(REG_BITBLT_FOREGROUND_COLOR_BYTE_1, (localColor >> 8) & 0xFF);
+    if (this->videoMode.colorDepth == 24) this->grWrite(REG_BITBLT_FOREGROUND_COLOR_BYTE_2, (localColor >> 16) & 0xFF);
 
     // Width
-    grWrite(dev, REG_BITBLT_WIDTH_BYTE_0, (rectangleDrawData.width * bytesPerPixel - 1) & 0xFF);
-    grWrite(dev, REG_BITBLT_WIDTH_BYTE_1, ((rectangleDrawData.width * bytesPerPixel - 1) >> 8) & 0x1F);
+    this->grWrite(REG_BITBLT_WIDTH_BYTE_0, (width * bytesPerPixel - 1) & 0xFF);
+    this->grWrite(REG_BITBLT_WIDTH_BYTE_1, ((width * bytesPerPixel - 1) >> 8) & 0x1F);
 
     // Height
-    grWrite(dev, REG_BITBLT_HEIGHT_BYTE_0, (rectangleDrawData.height - 1) & 0xFF);
-    grWrite(dev, REG_BITBLT_HEIGHT_BYTE_1, ((rectangleDrawData.height - 1) >> 8) & 0x07);
+    this->grWrite(REG_BITBLT_HEIGHT_BYTE_0, (height - 1) & 0xFF);
+    this->grWrite(REG_BITBLT_HEIGHT_BYTE_1, ((height - 1) >> 8) & 0x07);
 
     // Destination pitch
-    grWrite(dev, REG_BITBLT_DESTINATION_PITCH_BYTE_0, pitch & 0xFF);
-    grWrite(dev, REG_BITBLT_DESTINATION_PITCH_BYTE_1, (pitch >> 8) & 0x1F);
+    this->grWrite(REG_BITBLT_DESTINATION_PITCH_BYTE_0, pitch & 0xFF);
+    this->grWrite(REG_BITBLT_DESTINATION_PITCH_BYTE_1, (pitch >> 8) & 0x1F);
 
     // Destination
-    uint32_t dest = pitch * rectangleDrawData.y + rectangleDrawData.x * bytesPerPixel;
-    grWrite(dev, REG_BITBLT_DESTINATION_START_BYTE_0, dest & 0xFF);
-    grWrite(dev, REG_BITBLT_DESTINATION_START_BYTE_1, (dest >> 8) & 0xFF);
-    grWrite(dev, REG_BITBLT_DESTINATION_START_BYTE_2, (dest >> 16) & 0x3F);
+    uint32_t dest = pitch * y + x * bytesPerPixel;
+    this->grWrite(REG_BITBLT_DESTINATION_START_BYTE_0, dest & 0xFF);
+    this->grWrite(REG_BITBLT_DESTINATION_START_BYTE_1, (dest >> 8) & 0xFF);
+    this->grWrite(REG_BITBLT_DESTINATION_START_BYTE_2, (dest >> 16) & 0x3F);
 
     uint8_t bltMode = BITBLT_BLT_MODE_ENABLE_8X8_PATTERN | BITBLT_BLT_MODE_ENABLE_COLOR_EXPAND;
 
-    switch(dev->videoMode.colorDepth) {
+    switch(this->videoMode.colorDepth) {
         case 8: bltMode |= BITBLT_BLT_MODE_COLOR_EXPAND_WIDTH_8BBP; break;
         case 16: bltMode |= BITBLT_BLT_MODE_COLOR_EXPAND_WIDTH_16BPP; break;
         case 24: bltMode |= BITBLT_BLT_MODE_COLOR_EXPAND_WIDTH_24BPP; break;
     }
 
-    grWrite(dev, REG_BITBLT_BLT_MODE, bltMode);
-    grWrite(dev, REG_BITBLT_BLT_MODE_EXTENSIONS, BITBLT_BLT_MODE_EXTENSIONS_ENABLE_SOLID_COLOR_FILL);
+    this->grWrite(REG_BITBLT_BLT_MODE, bltMode);
+    this->grWrite(REG_BITBLT_BLT_MODE_EXTENSIONS, BITBLT_BLT_MODE_EXTENSIONS_ENABLE_SOLID_COLOR_FILL);
 
-    grWrite(dev, REG_BITBLT_BLT_START_STATUS, BITBLT_BLT_START_STATUS_START);
+    this->grWrite(REG_BITBLT_BLT_START_STATUS, BITBLT_BLT_START_STATUS_START);
 }
 
 void cirrusInit(CirrusDevice *dev, PciDevice *pciDev)
 {
-    dev->dev = pciDev;
-    dev->mmio = 0xB4000000; // Don't ask!
-
-    pciDev->enableBusMastering();
-
-    nodeRegister("/video/0", nullptr, nullptr);
-    nodeRegister("/video/0/setMode", dev, setMode);
-    nodeRegister("/video/0/getMode", dev, getMode);
-    nodeRegister("/video/0/getFeatures", dev, getFeatures);
-    nodeRegister("/video/0/drawRectangle", dev, drawRectangle);
+    
 }
 
 /*
